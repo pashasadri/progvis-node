@@ -1,12 +1,17 @@
 import request from "request";
 import _ from "lodash";
-import { v4 as uuidv4 } from "uuid";
+
+import crypto from "crypto";
 import { hostname } from "os";
 import process from "process";
 import path from "path";
 
 const WAIT = 10 * 1000; // 10 seconds
 const SERVER = process.env.PV_API || "https://progvis.com/api/v1/progress";
+
+function _random_id() {
+  return crypto.randomBytes(32).toString("hex");
+}
 
 function _now() {
   return Math.floor(Date.now() / 1000);
@@ -38,13 +43,15 @@ class ProgVis {
       console.warn(`PV: Consider specifying a name. Defaulted to "${base}"`);
     }
 
+    const collect = !!_options.collect_argv;
+
     name = _.trim(name) || base;
     // TODO: require name
     this._data = {
-      uuid: uuidv4(),
+      uuid: _random_id(),
       name,
-      argv: _options.collect_argv ? argv.join(" ") : "not_collected",
-      host: hostname(),
+      argv: collect ? argv.join(" ") : "not collected",
+      host: collect ? hostname() : "not.collected",
       state: "init",
       start: _now(),
       end_ts: null,
@@ -65,12 +72,14 @@ class ProgVis {
     }
 
     this._send = _.throttle(() => this._upload(), WAIT);
-    this._send();
+    this._flush = _.debounce(() => this._send.flush(), 100, { maxWait: 1000 });
+
+    this._immediate();
   }
 
   _immediate() {
     this._send();
-    this._send.flush();
+    this._flush();
   }
 
   _exception(err, origin) {
@@ -113,6 +122,12 @@ class ProgVis {
         // TODO: handle 401 errors
         if (error || res.statusCode !== 200) {
           this._error++;
+
+          if (res && res.statusCode === 401) {
+            this._token = null;
+            console.error("PV: client token is invalid");
+            return;
+          }
           data.msgs = clone.msgs.concat(...data.msgs);
           data.steps = clone.steps.concat(...data.steps);
           if (this._error > 5) {
@@ -140,27 +155,35 @@ class ProgVis {
 
   step(delta = 1) {
     const data = this._data;
+    if (data.end_ts) {
+      console.warn(`PV "${data.name}" is already in "${data.state}" state`);
+      return;
+    }
     // TODO: check if progress is positive
     // TODO: extend expected?
     data.curr += delta;
     const t = _now();
     const s = this._seq++;
-    data.steps.push({ s, t, delta });
+    data.steps.push({
+      t: _now(),
+      p: delta,
+      s: this._seq++
+    });
 
-    this._send();
-
-    // TODO: maybe only from init?
     if (data.state != "running") {
       data.state = "running";
-      this._send.flush();
+      this._immediate();
+    } else {
+      this._send();
     }
   }
 
   log(data) {
-    m = _.clone(data);
-    const t = _now();
-    const s = this._seq++;
-    this._data.msgs.push({ s, t, m });
+    this._data.msgs.push({
+      t: _now(),
+      m: _.clone(data),
+      s: this._seq++
+    });
 
     this._send();
   }
@@ -175,12 +198,22 @@ class ProgVis {
   }
 
   done() {
-    this._data.state = "done";
+    const data = this._data;
+    if (data.end_ts) {
+      console.warn(`PV "${data.name}" is already in "${data.state}" state`);
+      return;
+    }
+    data.state = "done";
     this._end();
   }
 
   error() {
-    this._data.state = "error";
+    const data = this._data;
+    if (data.end_ts) {
+      console.warn(`PV "${data.name}" is already in "${data.state}" state`);
+      return;
+    }
+    data.state = "error";
     this._end();
   }
 }
