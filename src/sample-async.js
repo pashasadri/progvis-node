@@ -1,4 +1,4 @@
-import ProgVis from "progvis";
+import ProgVis from "./progvis";
 
 async function main() {
   // get a list of items to process
@@ -19,3 +19,18 @@ async function main() {
 }
 
 main();
+
+// async return an array of numbers after a delay
+async function getLotsOfThings() {
+  const list = Array.from({ length: 40 }, () => Math.floor(Math.random() * 40));
+  return new Promise(resolve => {
+    setTimeout(() => resolve(list), 1000);
+  });
+}
+
+// async return number x 2 after a random delay
+async function process(number) {
+  return new Promise(resolve => {
+    setTimeout(() => number * 2, 100 + Math.random() * 1000);
+  });
+}
