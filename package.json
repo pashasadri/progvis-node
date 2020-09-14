@@ -1,6 +1,6 @@
 {
   "name": "progvis",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Client library for ProgVis. Use it to instrument your cron and batch jobs.  Track progress on progvis.com",
   "keywords": [
     "progress",
@@ -9,7 +9,10 @@
     "cron",
     "batch"
   ],
-  "files": ["dist/progvis.js", "src/progvis.js"],
+  "files": [
+    "dist/progvis.js",
+    "src/progvis.js"
+  ],
   "main": "dist/progvis.js",
   "module": "src/progvis.js",
   "sideEffects": false,
@@ -21,7 +24,7 @@
   "license": "MIT",
   "repository": "github:pashasadri/progvis-node",
   "dependencies": {
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.20",
     "request": "^2.88.2"
   },
   "devDependencies": {
