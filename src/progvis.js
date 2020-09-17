@@ -1,5 +1,6 @@
-import request from "request";
-import _ from "lodash";
+import zlib from "zlib";
+import https from "https";
+import http from "http";
 
 import crypto from "crypto";
 import { hostname } from "os";
@@ -24,8 +25,10 @@ const DEFAULT_OPTS = {
 };
 
 class ProgVis {
-  constructor(name = null, expected = null, options = {}) {
-    const _options = _.defaults(options, DEFAULT_OPTS);
+  constructor(name = "", expected = null, options = {}) {
+    name = name.trim();
+
+    const _options = Object.assign({}, DEFAULT_OPTS, options);
 
     this._token = _options.token || process.env.PV_TOKEN;
     if (!this._token) {
@@ -45,7 +48,7 @@ class ProgVis {
 
     const collect = !!_options.collect_argv;
 
-    name = _.trim(name) || base;
+    name = name || base;
     // TODO: require name
     this._data = {
       uuid: _random_id(),
@@ -71,8 +74,8 @@ class ProgVis {
       process.once("uncaughtException", this._monitor);
     }
 
-    this._send = _.throttle(() => this._upload(), WAIT);
-    this._flush = _.debounce(() => this._send.flush(), 100, { maxWait: 1000 });
+    this._send = debounce(() => this._upload(), WAIT, WAIT);
+    this._flush = debounce(() => this._send.flush(), 100, 1000);
 
     this._immediate();
   }
@@ -101,66 +104,70 @@ class ProgVis {
     this._inflight = true;
 
     const data = this._data;
-    const clone = _.clone(data);
-    clone.client_ms = Date.now();
+    data.client_ms = Date.now();
+
+    const clone = JSON.stringify(data);
 
     // reset
     data.msgs = [];
     data.steps = [];
+    data.client_ms = null;
 
-    // console.log(JSON.stringify(clone, null, null, 2));
+    const url = new URL(this._server);
+    url.searchParams.set("token", this._token);
 
-    request.post(
-      {
-        url: this._server,
-        timeout: 5000,
-        qs: { token: this._token },
-        json: clone
-      },
-      (error, res, body) => {
-        this._inflight = false;
-        // TODO: handle 401 errors
-        if (error || res.statusCode !== 200) {
-          this._error++;
+    post(url, clone, (error, res, body) => {
+      this._inflight = false;
+      // TODO: handle 401 errors
+      if (error || res.statusCode !== 200) {
+        this._error++;
 
-          if (res && res.statusCode === 401) {
-            this._token = null;
-            console.error("PV: client token is invalid");
-            return;
-          }
-          data.msgs = clone.msgs.concat(...data.msgs);
-          data.steps = clone.steps.concat(...data.steps);
-          if (this._error > 5) {
-            return;
-          }
-          // TODO: handle backoffs
-          if (this._queue) {
-            this._queue = false;
-            this._immediate();
-          } else {
-            this._send();
-          }
+        if (res && res.statusCode === 401) {
+          this._token = null;
+          console.error("PV: client token is invalid");
           return;
         }
 
-        this._error = 0;
+        // restore steps and msgs we tried to send
+        const old = JSON.parse(clone);
+        data.msgs = old.msgs.concat(...data.msgs);
+        data.steps = old.steps.concat(...data.steps);
+
+        if (this._error > 5) {
+          return;
+        }
+        // TODO: handle backoffs
         if (this._queue) {
           this._queue = false;
           this._immediate();
+        } else {
+          this._send();
         }
-        // TODO do something with reply
+        return;
       }
-    );
+
+      this._error = 0;
+      if (this._queue) {
+        this._queue = false;
+        this._immediate();
+      }
+      // TODO do something with reply
+    });
   }
 
   step(delta = 1) {
+    delta = parseInt(delta, 10);
+    if (delta < 1) {
+      console.warn("PV .step() called with non-numeric or < 1 value");
+      return;
+    }
+
     const data = this._data;
     if (data.end_ts) {
       console.warn(`PV "${data.name}" is already in "${data.state}" state`);
       return;
     }
-    // TODO: check if progress is positive
-    // TODO: extend expected?
+
     data.curr += delta;
     const t = _now();
     const s = this._seq++;
@@ -179,9 +186,11 @@ class ProgVis {
   }
 
   log(data) {
+    if (!data) return;
+
     this._data.msgs.push({
       t: _now(),
-      m: _.clone(data),
+      m: clone(data),
       s: this._seq++
     });
 
@@ -216,6 +225,100 @@ class ProgVis {
     data.state = "error";
     this._end();
   }
+}
+
+function clone(x) {
+  if (x) {
+    return JSON.parse(JSON.stringify(x));
+  } else {
+    return null;
+  }
+}
+
+function once(cb) {
+  let called = false;
+  return (...args) => {
+    if (called) return;
+    called = true;
+    cb(...args);
+  };
+}
+
+function post(url, payload, cb) {
+  cb = once(cb);
+
+  const protocol = url.protocol === "https" ? https : http;
+
+  const options = {
+    method: "POST",
+    timeout: 5000
+  };
+
+  // TODO: support compress replies
+  // const headers = { 'accept-encoding': 'gzip, deflate' }
+
+  zlib.gzip(payload, (err, buffer) => {
+    if (err) {
+      cb(err);
+      return;
+    }
+
+    options.headers = {
+      "Content-Encoding": "gzip",
+      "Content-Length": buffer.length,
+      "Content-Type": "application/json"
+    };
+
+    const req = protocol.request(url, options, res => {
+      res.setEncoding("utf8"); // note: not requesting or handling compressed response
+      let body = "";
+      res.on("data", chunk => (body = body + chunk));
+      // TODO: decompress data
+      res.on("end", () => {
+        cb(null, res, body);
+      });
+    });
+
+    req.on("timeout", () => {
+      req.abort();
+      cb(new Error("Request timed out"));
+    });
+
+    req.on("error", cb);
+
+    req.write(buffer);
+    req.end();
+  });
+}
+
+function debounce(fn, wait, max) {
+  let timer; // timer id
+  let last; // last time fn was actually invoked
+
+  function cb() {
+    last = Date.now();
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    fn();
+  }
+
+  function wrapped() {
+    const remain = Math.max(0, last ? max - (Date.now() - last) : max);
+    const delay = Math.min(remain, wait);
+
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+
+    timer = setTimeout(cb, delay);
+  }
+
+  wrapped.flush = cb;
+
+  return wrapped;
 }
 
 module.exports = ProgVis;
