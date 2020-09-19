@@ -2,7 +2,8 @@
 
 This is the Node client library for ProgVis.
 
-ProgVis is a simple to use tool for instrumenting cron and other long running batch jobs so you can easily track their progress and state.
+ProgVis is a simple to use tool for instrumenting periodic and long running
+batch jobs so you can easily track their progress and state.
 
 ### Table of Contents
 
@@ -36,16 +37,20 @@ ProgVis lets you...
 Install ProgVis Node Client using npm or yarn.
 
 ```
-npm install progvis
+$ npm install progvis
 ```
 
 Then visit [ProgVis](https://progvis.com), register and get a client access token.
 
-Set your client access token as PV_TOKEN environement variable or pass it in as options.token to the ProgVis constructor.
+Set your client access token as PV_TOKEN environement variable or pass it in as
+options.token to the ProgVis constructor.
 
 ### Example Usage
 
-ProgVis API is similar to cli progress tracking libraries.  Instead of logging to terminal, it uploads progress data to progvis.com where you can access it.
+> :information_source: if you can't modify your program, you can use [ProgVis CLI](https://github.com/pashasadri/progvis-cli) to track your jobs.
+
+ProgVis API is similar to cli progress tracking libraries.  Instead of logging
+to terminal, it uploads progress data to progvis.com where you can access it.
 
 ```javascript
 import ProgVis from ‘progvis’;
