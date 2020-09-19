@@ -247,7 +247,7 @@ function once(cb) {
 function post(url, payload, cb) {
   cb = once(cb);
 
-  const protocol = url.protocol === "https" ? https : http;
+  const protocol = url.protocol === "https:" ? https : http;
 
   const options = {
     method: "POST",
