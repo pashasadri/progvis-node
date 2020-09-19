@@ -25,8 +25,8 @@ const DEFAULT_OPTS = {
 };
 
 class ProgVis {
-  constructor(name = "", expected = null, options = {}) {
-    name = name.trim();
+  constructor(name, expected = null, options = {}) {
+    name = (name || '').trim();
 
     const _options = Object.assign({}, DEFAULT_OPTS, options);
 
