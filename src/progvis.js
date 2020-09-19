@@ -39,8 +39,9 @@ class ProgVis {
 
     this._server = _options._server;
 
-    const argv = process.argv.slice(1);
-    const base = path.parse(argv[0]).base;
+    // on the node REPL, argv only has a single element
+    const argv = process.argv.length > 1 ? process.argv.slice(1) : process.argv.slice();
+    const base = path.parse(argv[0] || 'unknown').base;
 
     if (!name) {
       console.warn(`PV: Consider specifying a name. Defaulted to "${base}"`);
