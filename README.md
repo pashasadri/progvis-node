@@ -53,22 +53,25 @@ ProgVis API is similar to cli progress tracking libraries.  Instead of logging
 to terminal, it uploads progress data to progvis.com where you can access it.
 
 ```javascript
-import ProgVis from ‘progvis’;
+import ProgVis from "progvis";
 
-...
-const things = await getThingsToProcess();
+async function main() {
+  const things = await getThingsToProcess();
 
-// opts = { token: <ACCESS_TOKEN> }
-const pv = new ProgVis("job_name", things.length, opts);
+  // opts = { token: <ACCESS_TOKEN> }
+  const pv = new ProgVis("job_name", things.length, opts);
 
-while (things.length) {
-  const thing = things.shift();
-  const result = await process(thing);
-  pv.step(1);                // indicate you made some progress
-  pv.log({ thing, result }); // optionally log some stuff
-})
+  while (things.length) {
+    const thing = things.shift();
+    const result = await process(thing);
+    pv.step(1);                // indicate you made some progress
+    pv.log({ thing, result }); // optionally log some stuff
+  })
 
-pv.done(); // success OR pv.error(); for failure
+  pv.done(); // success OR pv.error(); for failure
+}
+
+main();
 ...
 
 ```
