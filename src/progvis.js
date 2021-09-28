@@ -7,6 +7,7 @@ import { hostname } from "os";
 import process from "process";
 import path from "path";
 
+// make this configurable by server
 const WAIT = 10 * 1000; // 10 seconds
 const SERVER = process.env.PV_API || "https://progvis.com/api/v1/progress";
 
@@ -43,6 +44,7 @@ class ProgVis {
     const argv = process.argv.length > 1 ? process.argv.slice(1) : process.argv.slice();
     const base = path.parse(argv[0] || 'unknown').base;
 
+    // TODO: require name
     if (!name) {
       console.warn(`PV: Consider specifying a name. Defaulted to "${base}"`);
     }
@@ -50,12 +52,11 @@ class ProgVis {
     const collect = !!_options.collect_argv;
 
     name = name || base;
-    // TODO: require name
     this._data = {
       uuid: _random_id(),
       name,
-      argv: collect ? argv.join(" ") : "not collected",
-      host: collect ? hostname() : "not.collected",
+      argv: collect ? argv.join(" ") : "",
+      host: collect ? hostname() : "",
       state: "init",
       start: _now(),
       end_ts: null,
