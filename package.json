@@ -1,6 +1,6 @@
 {
   "name": "progvis",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Client library for ProgVis. Use it to instrument your cron and batch jobs.  Track progress on progvis.com",
   "keywords": [
     "progress",
@@ -25,9 +25,9 @@
   "repository": "github:pashasadri/progvis-node",
   "dependencies": {},
   "devDependencies": {
-    "@babel/cli": "^7.10.1",
-    "@babel/core": "^7.10.2",
-    "@babel/node": "^7.10.1",
-    "@babel/preset-env": "^7.10.2"
+    "@babel/cli": "^7.15.7",
+    "@babel/core": "^7.15.5",
+    "@babel/node": "^7.15.4",
+    "@babel/preset-env": "^7.15.6"
   }
 }
