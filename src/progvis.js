@@ -7,9 +7,11 @@ import { hostname } from "os";
 import process from "process";
 import path from "path";
 
-// make this configurable by server
+// TODO: copy argv right here?
+
+// TODO: make this configurable by server
 const WAIT = 10 * 1000; // 10 seconds
-const SERVER = process.env.PV_API || "https://progvis.com/api/v1/progress";
+const SERVER = process.env.PV_API || "https://progvis.io/api/v1/progress";
 
 function _random_id() {
   return crypto.randomBytes(32).toString("hex");
@@ -118,6 +120,7 @@ class ProgVis {
     const url = new URL(this._server);
     url.searchParams.set("token", this._token);
 
+    this._queue = false;
     post(url, clone, (error, res, body) => {
       this._inflight = false;
       // TODO: handle 401 errors

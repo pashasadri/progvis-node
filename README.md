@@ -17,7 +17,7 @@ batch jobs so you can easily track their progress and state.
 
 ### Screenshot
 
-[ProgVis Web UI](https://progvis.com) lets you track current and past jobs, view logs, etc.
+[ProgVis Web UI](https://progvis.io) lets you track current and past jobs, view logs, etc.
 
 Here is a sample screen grab:
 
@@ -40,7 +40,7 @@ Install ProgVis Node Client using npm or yarn.
 $ npm install progvis
 ```
 
-Then visit [ProgVis](https://progvis.com), register and get a client access token.
+Then visit [ProgVis](https://progvis.io), register and get a client access token.
 
 Set your client access token as PV_TOKEN environement variable or pass it in as
 options.token to the ProgVis constructor.
@@ -50,7 +50,7 @@ options.token to the ProgVis constructor.
 > :information_source: if you can't modify your program, you can use [ProgVis CLI](https://github.com/pashasadri/progvis-cli) to track your jobs.
 
 ProgVis API is similar to cli progress tracking libraries.  Instead of logging
-to terminal, it uploads progress data to progvis.com where you can access it.
+to terminal, it uploads progress data to progvis.io where you can access it.
 
 ```javascript
 import ProgVis from "progvis";
